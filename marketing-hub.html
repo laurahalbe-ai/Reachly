@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarketingHub — KI-gestütztes Marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: #e3e1d8;
+    --border-strong: #c8c6bc;
+    --text: #1a1917;
+    --text-muted: #6b6960;
+    --text-faint: #9e9c93;
+    --accent: #2d5a3d;
+    --accent-light: #e8f0ea;
+    --accent-text: #1e3d2a;
+    --danger: #c0392b;
+    --danger-light: #fdf0ee;
+    --warn: #b8860b;
+    --warn-light: #fdf8e8;
+    --success: #2d7d46;
+    --success-light: #eaf4ed;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* API Key overlay */
+  #api-overlay {
+    position: fixed; inset: 0; background: rgba(26,25,23,0.7); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  #api-overlay.hidden { display: none; }
+  .api-modal {
+    background: var(--surface); border-radius: 16px; padding: 40px; max-width: 440px; width: 90%;
+    box-shadow: var(--shadow-md);
+  }
+  .api-modal h2 { font-family: 'DM Serif Display', serif; font-size: 24px; margin-bottom: 8px; font-weight: 400; }
+  .api-modal p { color: var(--text-muted); font-size: 13px; margin-bottom: 20px; line-height: 1.7; }
+  .api-modal a { color: var(--accent); }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow-y: auto;
+  }
+  .sidebar-logo {
+    padding: 20px 20px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logo-icon svg { width: 16px; height: 16px; fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; }
+  .logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+  .logo-sub { font-size: 11px; color: var(--text-faint); }
+  .nav-section { font-size: 10px; color: var(--text-faint); padding: 16px 20px 4px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 20px; cursor: pointer;
+    font-size: 13px; color: var(--text-muted); border: none; background: none; width: 100%;
+    text-align: left; border-radius: 0; transition: color 0.15s, background 0.15s;
+  }
+  .nav-item:hover { background: var(--bg); color: var(--text); }
+  .nav-item.active { background: var(--accent-light); color: var(--accent-text); font-weight: 500; }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .api-key-btn {
+    margin: auto 16px 16px; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 12px; color: var(--text-muted); cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .api-key-btn:hover { border-color: var(--border-strong); }
+  .key-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+  .key-dot.inactive { background: var(--text-faint); }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .topbar-desc { font-size: 12px; color: var(--text-faint); }
+  .topbar-right { display: flex; gap: 8px; }
+  .content { flex: 1; overflow-y: auto; padding: 28px; }
+
+  /* Sections */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px; box-shadow: var(--shadow);
+  }
+  .card-title { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; font-weight: 500; }
+  .card-value { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; }
+  .card-delta { font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .delta-up { color: var(--success); }
+  .delta-down { color: var(--danger); }
+
+  /* Grids */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+
+  /* Forms */
+  label.field-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
+  input[type=text], input[type=password], textarea, select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text); font-size: 13px; font-family: 'Inter', sans-serif;
+    outline: none; transition: border-color 0.15s; resize: vertical;
+  }
+  input[type=text]:focus, input[type=password]:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45,90,61,0.08); }
+  .field { margin-bottom: 12px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; display: inline-flex;
+    align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg); border-color: var(--border-strong); }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--accent); color: white; border-color: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent-text); border-color: var(--accent-text); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Tool panels */
+  .tool-panel { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+  .panel-title {
+    font-size: 13px; font-weight: 600; margin-bottom: 16px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .panel-icon {
+    width: 28px; height: 28px; border-radius: 6px; background: var(--accent-light);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .panel-icon svg { width: 14px; height: 14px; stroke: var(--accent); fill: none; stroke-width: 2; stroke-linecap: round; }
+
+  /* Output */
+  .output-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .output-box {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 16px; font-size: 13px; line-height: 1.8; min-height: 200px; white-space: pre-wrap;
+    color: var(--text); font-family: 'Inter', sans-serif; overflow-y: auto; max-height: 500px;
+  }
+  .output-placeholder { color: var(--text-faint); font-style: italic; }
+  .output-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* Streaming */
+  .streaming-cursor::after { content: '▋'; animation: blink 0.8s step-end infinite; color: var(--accent); }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Spinner */
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Tabs */
+  .tab-nav { display: flex; gap: 2px; margin-bottom: 20px; background: var(--bg); border-radius: var(--radius-sm); padding: 3px; width: fit-content; }
+  .tab-btn { padding: 6px 14px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: var(--text-muted); border-radius: 5px; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .tab-btn.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Dashboard-specific */
+  .kpi-section { margin-bottom: 20px; }
+  .section-heading { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+  .channel-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .channel-row:last-child { border-bottom: none; }
+  .channel-name { font-size: 13px; width: 90px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+  .channel-pct { font-size: 12px; color: var(--text-muted); width: 36px; text-align: right; }
+  .task-item { display: flex; align-items: flex-start; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .task-item:last-child { border-bottom: none; }
+  .task-dot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .dot-warn { background: var(--warn); }
+  .dot-ok { background: var(--success); }
+  .dot-idle { background: var(--border-strong); }
+
+  /* Checkboxes */
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .check-label { display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; padding: 5px 10px; border: 1px solid var(--border); border-radius: 20px; user-select: none; transition: all 0.15s; }
+  .check-label:has(input:checked) { background: var(--accent-light); border-color: var(--accent); color: var(--accent-text); }
+  .check-label input { width: 13px; height: 13px; accent-color: var(--accent); }
+
+  /* Metrics row */
+  .metric-mini { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 16px; }
+  .metric-mini .label { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-mini .val { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .metric-mini .delta { font-size: 11px; margin-top: 2px; }
+
+  /* Badge */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 500; }
+  .badge-success { background: var(--success-light); color: var(--success); }
+  .badge-warn { background: var(--warn-light); color: var(--warn); }
+  .badge-danger { background: var(--danger-light); color: var(--danger); }
+
+  /* Toast */
+  .toast-wrap { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
+  .toast { background: var(--text); color: white; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; box-shadow: var(--shadow-md); animation: slideIn 0.2s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Responsive sidebar collapse */
+  @media (max-width: 900px) {
+    .sidebar { width: 60px; }
+    .sidebar-logo .logo-text, .sidebar-logo .logo-sub, .nav-section, .nav-item span, .api-key-btn span { display: none; }
+    .nav-item { justify-content: center; padding: 10px; }
+    .api-key-btn { justify-content: center; }
+    .topbar-desc { display: none; }
+    .tool-panel { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- API Key overlay -->
+<div id="api-overlay">
+  <div class="api-modal">
+    <h2>API-Key eingeben</h2>
+    <p>Gib deinen Anthropic API-Key ein, um alle KI-Funktionen zu nutzen. Der Key wird nur im Browser-Speicher gespeichert und nie übertragen.<br><br>
+    <a href="https://console.anthropic.com/settings/keys" target="_blank">Key erstellen →</a></p>
+    <div class="field">
+      <label class="field-label">Anthropic API-Key</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveApiKey()">Speichern &amp; starten</button>
+    <p style="margin-top:12px;font-size:11px;color:var(--text-faint)">Dein Key wird lokal im Browser gespeichert (localStorage) und verlässt dein Gerät nicht.</p>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<div class="app">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+      </div>
+      <div>
+        <div class="logo-text">MarketingHub</div>
+        <div class="logo-sub">KI-gestütztes Marketing</div>
+      </div>
+    </div>
+
+    <div class="nav-section">Übersicht</div>
+    <button class="nav-item active" onclick="showSection('dashboard',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Dashboard</span>
+    </button>
+
+    <div class="nav-section">Inhalte erstellen</div>
+    <button class="nav-item" onclick="showSection('content',this)">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span>Content-Generator</span>
+    </button>
+    <button class="nav-item" onclick="showSection('email',this)">
+      <svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span>Email-Kampagnen</span>
+    </button>
+    <button class="nav-item" onclick="showSection('social',this)">
+      <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      <span>Social Media</span>
+    </button>
+
+    <div class="nav-section">Performance</div>
+    <button class="nav-item" onclick="showSection('seo',this)">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <span>SEO & Keywords</span>
+    </button>
+    <button class="nav-item" onclick="showSection('ads',this)">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span>Ads-Texte</span>
+    </button>
+
+    <div class="nav-section">Strategie</div>
+    <button class="nav-item" onclick="showSection('strategy',this)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span>Strategie-Assistent</span>
+    </button>
+
+    <div style="flex:1"></div>
+    <button class="api-key-btn" onclick="document.getElementById('api-overlay').classList.remove('hidden')">
+      <div class="key-dot" id="key-dot"></div>
+      <span>API-Key</span>
+    </button>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title" id="page-title">Dashboard</div>
+        <div class="topbar-desc" id="page-desc">Überblick deiner Marketing-Kanäle</div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge badge-success" id="ai-status">
+          <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span>
+          KI bereit
+        </span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div class="section active" id="sec-dashboard">
+        <div class="kpi-section">
+          <div class="grid-4">
+            <div class="card"><div class="card-title">Organische Reichweite</div><div class="card-value">18.240</div><div class="card-delta delta-up">↑ +12% Vorwoche</div></div>
+            <div class="card"><div class="card-title">Email-Öffnungsrate</div><div class="card-value">34,2%</div><div class="card-delta delta-up">↑ +3,1 Pkte.</div></div>
+            <div class="card"><div class="card-title">Conversion-Rate</div><div class="card-value">2,8%</div><div class="card-delta delta-down">↓ −0,2 Pkte.</div></div>
+            <div class="card"><div class="card-title">ROAS (Ads)</div><div class="card-value">4,1×</div><div class="card-delta delta-up">↑ +0,4 Vorperiode</div></div>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-heading">Traffic-Quellen</div>
+            <div class="channel-row"><div class="channel-name">Organisch</div><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div><div class="channel-pct">72%</div></div>
+            <div class="channel-row"><div class="channel-name">Email</div><div class="bar-track"><div class="bar-fill" style="width:14%"></div></div><div class="channel-pct">14%</div></div>
+            <div class="channel-row"><div class="channel-name">Social</div><div class="bar-track"><div class="bar-fill" style="width:9%"></div></div><div class="channel-pct">9%</div></div>
+            <div class="channel-row"><div class="channel-name">Paid Ads</div><div class="bar-track"><div class="bar-fill" style="width:5%"></div></div><div class="channel-pct">5%</div></div>
+          </div>
+          <div class="card">
+            <div class="section-heading">Aufgaben</div>
+            <div class="task-item"><div class="task-dot dot-warn"></div><div><strong>Meta-Ads Budget prüfen</strong> — CPC ist um 9% gestiegen</div></div>
+            <div class="task-item"><div class="task-dot dot-ok"></div><div>3 Blog-Artikel für diese Woche planen</div></div>
+            <div class="task-item"><div class="task-dot dot-idle"></div><div>Welcome-Email-Sequenz aktualisieren</div></div>
+            <div class="task-item"><div class="task-dot dot-idle"></div><div>Keyword-Cluster für Herbst aufbauen</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-heading">KI-Schnellstart</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px">Wähle ein Modul aus der Navigation oder starte direkt hier:</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="showSection('content',document.querySelector('[onclick*=content]'))">Blog-Artikel schreiben</button>
+            <button class="btn btn-sm" onclick="showSection('email',document.querySelector('[onclick*=email]'))">Email erstellen</button>
+            <button class="btn btn-sm" onclick="showSection('social',document.querySelector('[onclick*=social]'))">Social Posts</button>
+            <button class="btn btn-sm" onclick="showSection('seo',document.querySelector('[onclick*=seo]'))">Keywords finden</button>
+            <button class="btn btn-sm btn-primary" onclick="showSection('strategy',document.querySelector('[onclick*=strategy]'))">Monatsplan erstellen →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTENT -->
+      <div class="section" id="sec-content">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-blog')">Blog-Artikel</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-product')">Produkttexte</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-landing')">Landingpage</button>
+        </div>
+
+        <!-- Blog -->
+        <div class="tab-pane active" id="tab-blog">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>
+                Blog-Artikel Generator
+              </div>
+              <div class="field"><label class="field-label">Thema</label><input type="text" id="blog-topic" placeholder="z. B. Nachhaltige Wintermode 2025"></div>
+              <div class="field-row">
+                <div><label class="field-label">Tonalität</label>
+                  <select id="blog-tone"><option>Informativ</option><option>Begeisternd</option><option>Storytelling</option><option>Expertentipp</option><option>Unterhaltend</option></select></div>
+                <div><label class="field-label">Länge</label>
+                  <select id="blog-len"><option>Kurz (~400 W.)</option><option selected>Mittel (~800 W.)</option><option>Lang (~1500 W.)</option></select></div>
+              </div>
+              <div class="field"><label class="field-label">Ziel-Keywords</label><input type="text" id="blog-kw" placeholder="Keyword1, Keyword2 (kommagetrennt)"></div>
+              <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="blog-audience" placeholder="z. B. Frauen 25–45, modebewusst"></div>
+              <button class="btn btn-primary" id="blog-btn" onclick="generateBlog()" style="width:100%">Artikel generieren</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Ergebnis</div>
+              <div class="output-box output-placeholder" id="blog-output">Der Blog-Artikel erscheint hier. Fülle das Formular aus und klicke auf „Artikel generieren".</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('blog-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('blog-output','blog-artikel.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Produkt -->
+        <div class="tab-pane" id="tab-product">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+                Produkttext-Generator
+              </div>
+              <div class="field"><label class="field-label">Produktname</label><input type="text" id="prod-name" placeholder="z. B. Premium Leder-Rucksack"></div>
+              <div class="field"><label class="field-label">Merkmale / Vorteile</label><textarea id="prod-features" rows="4" placeholder="- Handgefärbtes Vollnarbenleder&#10;- 15&quot; Laptopfach&#10;- 30 Jahre Garantie"></textarea></div>
+              <div class="field-row">
+                <div><label class="field-label">Format</label>
+                  <select id="prod-type"><option>E-Commerce (kurz)</option><option>Detail-Seite (lang)</option><option>Amazon-Stil</option></select></div>
+                <div><label class="field-label">Preisniveau</label>
+                  <select id="prod-price"><option>Günstig</option><option selected>Mid-Range</option><option>Premium</option><option>Luxus</option></select></div>
+              </div>
+              <button class="btn btn-primary" id="product-btn" onclick="generateProduct()" style="width:100%">Produkttext erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Ergebnis</div>
+              <div class="output-box output-placeholder" id="product-output">Produkttitel, Beschreibung und Bulletpoints erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('product-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('product-output','produkttext.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Landing -->
+        <div class="tab-pane" id="tab-landing">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+                Landingpage-Texte
+              </div>
+              <div class="field"><label class="field-label">Angebot / Produkt</label><input type="text" id="lp-offer" placeholder="Was wird angeboten?"></div>
+              <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="lp-audience" placeholder="Wer sind die Käufer?"></div>
+              <div class="field"><label class="field-label">Hauptproblem der Zielgruppe</label><input type="text" id="lp-pain" placeholder="Welches Problem wird gelöst?"></div>
+              <div class="field"><label class="field-label">Seitenziel</label>
+                <select id="lp-goal"><option>Direktverkauf</option><option>Lead-Generierung</option><option>Webinar-Anmeldung</option><option>App-Download</option><option>Beratungsgespräch</option></select></div>
+              <button class="btn btn-primary" id="landing-btn" onclick="generateLanding()" style="width:100%">Texte generieren</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Landingpage-Copy</div>
+              <div class="output-box output-placeholder" id="landing-output">Headline, Subheadline, Features und CTAs erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('landing-output')">Kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMAIL -->
+      <div class="section" id="sec-email">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-email-single')">Einzelne Email</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-email-subject')">Betreffzeilen</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-email-sequence')">Email-Sequenz</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-email-single">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                Email erstellen
+              </div>
+              <div class="field"><label class="field-label">Email-Typ</label>
+                <select id="email-type"><option>Newsletter</option><option>Promotion / Angebot</option><option>Welcome-Email</option><option>Warenkorb-Abbrecher</option><option>Re-Engagement</option><option>Produkt-Launch</option><option>Kundenservice</option></select></div>
+              <div class="field"><label class="field-label">Produkt / Anlass</label><input type="text" id="email-product" placeholder="z. B. Sommersale -30%, neues Produkt XY"></div>
+              <div class="field"><label class="field-label">Gewünschte Aktion</label><input type="text" id="email-cta" placeholder="z. B. jetzt kaufen, mehr erfahren"></div>
+              <div class="field"><label class="field-label">Zusatzinfos</label><textarea id="email-info" rows="3" placeholder="Rabattcode, Deadline, Tonalität, Besonderheiten…"></textarea></div>
+              <button class="btn btn-primary" id="email-btn" onclick="generateEmail()" style="width:100%">Email generieren</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Email-Entwurf</div>
+              <div class="output-box output-placeholder" id="email-output">Der vollständige Email-Text erscheint hier — mit Betreffzeile, Preheader und Body.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('email-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('email-output','email.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-email-subject">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+                Betreffzeilen-Varianten
+              </div>
+              <div class="field"><label class="field-label">Thema / Angebot</label><input type="text" id="subject-topic" placeholder="z. B. Flash-Sale, 24h nur 40% Rabatt"></div>
+              <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="subject-audience" placeholder="z. B. Bestandskunden, Frauen 30–50"></div>
+              <div class="field"><label class="field-label">Anzahl Varianten</label>
+                <select id="subject-count"><option>5 Varianten</option><option selected>8 Varianten</option><option>12 Varianten</option></select></div>
+              <button class="btn btn-primary" id="subject-btn" onclick="generateSubjects()" style="width:100%">Betreffzeilen erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Betreffzeilen</div>
+              <div class="output-box output-placeholder" id="subject-output">Varianten mit Strategie-Erklärung erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('subject-output')">Kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-email-sequence">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+                Email-Sequenz planen
+              </div>
+              <div class="field"><label class="field-label">Sequenz-Typ</label>
+                <select id="seq-type"><option>Welcome-Sequenz (3 Emails)</option><option>Nurture-Sequenz (5 Emails)</option><option>Launch-Sequenz (5 Emails)</option><option>Re-Engagement (3 Emails)</option><option>Post-Purchase (3 Emails)</option></select></div>
+              <div class="field"><label class="field-label">Produkt / Angebot</label><input type="text" id="seq-product" placeholder="Worum geht es in der Sequenz?"></div>
+              <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="seq-audience" placeholder="Wer empfängt die Sequenz?"></div>
+              <button class="btn btn-primary" id="sequence-btn" onclick="generateSequence()" style="width:100%">Sequenz erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Email-Sequenz</div>
+              <div class="output-box output-placeholder" id="sequence-output">Alle Emails der Sequenz mit Betreffzeilen und Abständen erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('sequence-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('sequence-output','email-sequenz.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SOCIAL -->
+      <div class="section" id="sec-social">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-posts')">Posts erstellen</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-calendar')">Content-Kalender</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-hashtags')">Hashtag-Sets</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-posts">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div>
+                Social Posts
+              </div>
+              <div class="field"><label class="field-label">Plattformen</label>
+                <div class="checkbox-group">
+                  <label class="check-label"><input type="checkbox" value="Instagram" checked> Instagram</label>
+                  <label class="check-label"><input type="checkbox" value="Facebook" checked> Facebook</label>
+                  <label class="check-label"><input type="checkbox" value="LinkedIn"> LinkedIn</label>
+                  <label class="check-label"><input type="checkbox" value="TikTok"> TikTok</label>
+                  <label class="check-label"><input type="checkbox" value="Pinterest"> Pinterest</label>
+                  <label class="check-label"><input type="checkbox" value="X/Twitter"> X</label>
+                </div>
+              </div>
+              <div class="field"><label class="field-label">Thema / Produkt</label><input type="text" id="social-topic" placeholder="z. B. neue Kollektion, Kundenstory, Tipp"></div>
+              <div class="field"><label class="field-label">Ziel</label>
+                <select id="social-goal"><option>Engagement steigern</option><option>Produkt bewerben</option><option>Community aufbauen</option><option>Reichweite erhöhen</option><option>Event bewerben</option></select></div>
+              <div class="field"><label class="field-label">Hashtag-Themen (optional)</label><input type="text" id="social-hashtags" placeholder="Mode, Nachhaltigkeit, Berlin"></div>
+              <button class="btn btn-primary" id="social-btn" onclick="generateSocial()" style="width:100%">Posts generieren</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Generierte Posts</div>
+              <div class="output-box output-placeholder" id="social-output">Posts für jede Plattform erscheinen hier — optimiert für Ton, Länge und Format.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('social-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('social-output','social-posts.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-calendar">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+                Content-Kalender
+              </div>
+              <div class="field"><label class="field-label">Branche / Nische</label><input type="text" id="cal-niche" placeholder="z. B. Schmuck, Outdoor-Ausrüstung, Bio-Lebensmittel"></div>
+              <div class="field"><label class="field-label">Zeitraum</label>
+                <select id="cal-period"><option>1 Woche</option><option>2 Wochen</option><option selected>1 Monat</option></select></div>
+              <div class="field"><label class="field-label">Aktuelle Kampagne / Aktion</label><input type="text" id="cal-promo" placeholder="z. B. Herbst-Sale, Launch neues Produkt"></div>
+              <button class="btn btn-primary" id="calendar-btn" onclick="generateCalendar()" style="width:100%">Kalender erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Content-Kalender</div>
+              <div class="output-box output-placeholder" id="calendar-output">Der strukturierte Posting-Plan erscheint hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('calendar-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('calendar-output','content-kalender.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-hashtags">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/><line x1="10" y1="3" x2="8" y2="21"/><line x1="16" y1="3" x2="14" y2="21"/></svg></div>
+                Hashtag-Sets
+              </div>
+              <div class="field"><label class="field-label">Thema / Nische</label><input type="text" id="ht-topic" placeholder="z. B. vegane Kosmetik, Herrenmode"></div>
+              <div class="field"><label class="field-label">Plattform</label>
+                <select id="ht-platform"><option>Instagram</option><option>TikTok</option><option>LinkedIn</option><option>Pinterest</option></select></div>
+              <div class="field"><label class="field-label">Sets generieren</label>
+                <select id="ht-sets"><option>1 Set (30 Tags)</option><option selected>3 Sets (mix)</option><option>5 Sets (verschiedene Reichweiten)</option></select></div>
+              <button class="btn btn-primary" id="hashtag-btn" onclick="generateHashtags()" style="width:100%">Hashtags generieren</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Hashtag-Sets</div>
+              <div class="output-box output-placeholder" id="hashtag-output">Hashtag-Sets mit Erklärungen erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('hashtag-output')">Kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEO -->
+      <div class="section" id="sec-seo">
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-keywords')">Keywords</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-meta')">Meta-Tags</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-seo-text')">SEO-Texte</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-keywords">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+                Keyword-Recherche
+              </div>
+              <div class="field"><label class="field-label">Seed-Keyword</label><input type="text" id="seo-seed" placeholder="z. B. Ledertasche Damen"></div>
+              <div class="field"><label class="field-label">Produktkategorie / Nische</label><input type="text" id="seo-niche" placeholder="z. B. Accessoires, Handtaschen"></div>
+              <div class="field-row">
+                <div><label class="field-label">Suchintention</label>
+                  <select id="seo-intent"><option>Alle</option><option>Kaufintention</option><option>Informationssuche</option><option>Vergleich</option><option>Navigational</option></select></div>
+                <div><label class="field-label">Markt</label>
+                  <select id="seo-market"><option>Deutschland (DE)</option><option>Österreich (AT)</option><option>Schweiz (CH)</option><option>DACH gesamt</option></select></div>
+              </div>
+              <button class="btn btn-primary" id="seo-btn" onclick="generateKeywords()" style="width:100%">Keywords recherchieren</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Keyword-Ergebnisse</div>
+              <div class="output-box output-placeholder" id="seo-output">Keyword-Cluster mit Suchvolumen-Schätzung und Long-Tail-Keywords erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('seo-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('seo-output','keywords.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-meta">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+                Meta-Tags Generator
+              </div>
+              <div class="field"><label class="field-label">Seitenthema / Haupt-Keyword</label><input type="text" id="meta-kw" placeholder="z. B. Lederhandtasche kaufen"></div>
+              <div class="field"><label class="field-label">Shop-/Markenname</label><input type="text" id="meta-brand" placeholder="z. B. LederWerk Berlin"></div>
+              <div class="field"><label class="field-label">Seitentyp</label>
+                <select id="meta-type"><option>Kategorie-Seite</option><option>Produktseite</option><option>Startseite</option><option>Blog-Artikel</option><option>Über uns</option></select></div>
+              <button class="btn btn-primary" id="meta-btn" onclick="generateMeta()" style="width:100%">Meta-Tags erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Meta-Tags</div>
+              <div class="output-box output-placeholder" id="meta-output">Title-Tag und Meta-Description (mit Zeichenanzahl) erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('meta-output')">Kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-seo-text">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+                SEO-Kategorietext
+              </div>
+              <div class="field"><label class="field-label">Kategorie / Seite</label><input type="text" id="cat-name" placeholder="z. B. Damen-Handtaschen"></div>
+              <div class="field"><label class="field-label">Haupt-Keywords</label><input type="text" id="cat-kws" placeholder="Handtasche Damen, Lederhandtasche kaufen"></div>
+              <div class="field"><label class="field-label">Textlänge</label>
+                <select id="cat-len"><option>Kurz (~150 W.)</option><option selected>Mittel (~300 W.)</option><option>Lang (~500 W.)</option></select></div>
+              <button class="btn btn-primary" id="seotext-btn" onclick="generateSeoText()" style="width:100%">SEO-Text erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">SEO-Kategorietext</div>
+              <div class="output-box output-placeholder" id="seotext-output">SEO-optimierter Kategorietext erscheint hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('seotext-output')">Kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADS -->
+      <div class="section" id="sec-ads">
+        <div class="grid-4" style="margin-bottom:20px">
+          <div class="metric-mini"><div class="label">Impressionen</div><div class="val">142K</div><div class="delta delta-up">↑ +8%</div></div>
+          <div class="metric-mini"><div class="label">Klicks</div><div class="val">3.840</div><div class="delta delta-up">↑ +5%</div></div>
+          <div class="metric-mini"><div class="label">CPC Ø</div><div class="val">0,82€</div><div class="delta delta-down">↑ +0,07€</div></div>
+          <div class="metric-mini"><div class="label">ROAS</div><div class="val">4,1×</div><div class="delta delta-up">↑ +0,4</div></div>
+        </div>
+        <div class="tab-nav">
+          <button class="tab-btn active" onclick="switchTab(this,'tab-adtext')">Ad-Texte</button>
+          <button class="tab-btn" onclick="switchTab(this,'tab-usp')">USP-Analyse</button>
+        </div>
+
+        <div class="tab-pane active" id="tab-adtext">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><path d="M21 2H3v16h5v4l4-4h5l4-4V2zM11 11V7m4 4V7"/></svg></div>
+                Ad-Texte Generator
+              </div>
+              <div class="field"><label class="field-label">Plattform</label>
+                <select id="ad-platform"><option>Google Search Ads</option><option>Meta (Facebook/Instagram)</option><option>LinkedIn Ads</option><option>TikTok Ads</option><option>Pinterest Ads</option></select></div>
+              <div class="field"><label class="field-label">Produkt / Angebot</label><input type="text" id="ad-product" placeholder="Was wird beworben?"></div>
+              <div class="field"><label class="field-label">USP / Alleinstellungsmerkmal</label><input type="text" id="ad-usp" placeholder="Was macht dich besonders?"></div>
+              <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="ad-audience" placeholder="z. B. Männer 30–50, kaufbereit"></div>
+              <div class="field"><label class="field-label">Call-to-Action</label><input type="text" id="ad-cta" placeholder="z. B. Jetzt kaufen, Gratis testen"></div>
+              <button class="btn btn-primary" id="ads-btn" onclick="generateAds()" style="width:100%">Ad-Texte erstellen</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">Ad-Varianten</div>
+              <div class="output-box output-placeholder" id="ads-output">3 Ad-Varianten mit Headlines, Texten und CTAs erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('ads-output')">Kopieren</button>
+                <button class="btn btn-sm" onclick="downloadOutput('ads-output','ad-texte.txt')">Herunterladen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-pane" id="tab-usp">
+          <div class="tool-panel">
+            <div class="card">
+              <div class="panel-title">
+                <div class="panel-icon"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+                USP-Analyse & Positionierung
+              </div>
+              <div class="field"><label class="field-label">Dein Shop / Produkt</label><input type="text" id="usp-shop" placeholder="Was verkaufst du?"></div>
+              <div class="field"><label class="field-label">Stärken</label><textarea id="usp-strengths" rows="3" placeholder="Was macht dich besser als Mitbewerber?"></textarea></div>
+              <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="usp-audience" placeholder="Wer sind deine Kunden?"></div>
+              <button class="btn btn-primary" id="usp-btn" onclick="generateUSP()" style="width:100%">USP entwickeln</button>
+            </div>
+            <div class="card output-wrap">
+              <div class="section-heading">USP & Positionierung</div>
+              <div class="output-box output-placeholder" id="usp-output">USP-Statement, Positionierung und Kernbotschaften erscheinen hier.</div>
+              <div class="output-actions">
+                <button class="btn btn-sm" onclick="copyOutput('usp-output')">Kopieren</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STRATEGY -->
+      <div class="section" id="sec-strategy">
+        <div class="tool-panel">
+          <div class="card">
+            <div class="panel-title">
+              <div class="panel-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              Strategie-Assistent
+            </div>
+            <div class="field"><label class="field-label">Shop-Name / Branche</label><input type="text" id="strat-shop" placeholder="z. B. FashionHub Berlin, Modehandel"></div>
+            <div class="field"><label class="field-label">Zielgruppe</label><input type="text" id="strat-audience" placeholder="z. B. Frauen 25–45, urban, einkommenssstark"></div>
+            <div class="field-row">
+              <div><label class="field-label">Monatliches Budget (€)</label><input type="text" id="strat-budget" placeholder="z. B. 2000"></div>
+              <div><label class="field-label">Hauptziel</label>
+                <select id="strat-goal"><option>Umsatz steigern</option><option>Neukunden gewinnen</option><option>Markenbekanntheit</option><option>Bestandskunden reaktivieren</option><option>Launch vorbereiten</option></select></div>
+            </div>
+            <div class="field"><label class="field-label">Aktuelle Herausforderungen</label><textarea id="strat-challenges" rows="3" placeholder="z. B. niedrige Conversion-Rate, hohe Absprungrate, schwache Email-Öffner…"></textarea></div>
+            <div class="field"><label class="field-label">Aktive Kanäle</label>
+              <div class="checkbox-group" style="margin-top:4px">
+                <label class="check-label"><input type="checkbox" checked> SEO</label>
+                <label class="check-label"><input type="checkbox" checked> Email</label>
+                <label class="check-label"><input type="checkbox"> Instagram</label>
+                <label class="check-label"><input type="checkbox"> Facebook</label>
+                <label class="check-label"><input type="checkbox"> Google Ads</label>
+                <label class="check-label"><input type="checkbox"> TikTok</label>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="strategy-btn" onclick="generateStrategy()" style="width:100%">30-Tage-Strategie erstellen</button>
+          </div>
+          <div class="card output-wrap">
+            <div class="section-heading">Deine Marketing-Strategie</div>
+            <div class="output-box output-placeholder" id="strategy-output" style="min-height:400px">Deine vollständige, personalisierte 30-Tage-Marketing-Strategie erscheint hier — mit Budget-Split, Content-Plan, Kanal-Empfehlungen und konkretem Wochenplan.</div>
+            <div class="output-actions">
+              <button class="btn btn-sm" onclick="copyOutput('strategy-output')">Kopieren</button>
+              <button class="btn btn-sm" onclick="downloadOutput('strategy-output','marketing-strategie.txt')">Herunterladen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── API Key ───────────────────────────────────────────────────────────────────
+let API_KEY = localStorage.getItem('mh_api_key') || '';
+
+function saveApiKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val.startsWith('sk-')) { alert('Bitte einen gültigen Anthropic API-Key eingeben (beginnt mit sk-ant-...).'); return; }
+  API_KEY = val;
+  localStorage.setItem('mh_api_key', val);
+  document.getElementById('api-overlay').classList.add('hidden');
+  document.getElementById('key-dot').classList.remove('inactive');
+  showToast('API-Key gespeichert ✓');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (API_KEY) {
+    document.getElementById('api-overlay').classList.add('hidden');
+    document.getElementById('key-dot').classList.remove('inactive');
+    document.getElementById('api-key-input').value = API_KEY;
+  } else {
+    document.getElementById('key-dot').classList.add('inactive');
+  }
+});
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const pageMeta = {
+  dashboard: { title: 'Dashboard', desc: 'Überblick deiner Marketing-Kanäle' },
+  content: { title: 'Content-Generator', desc: 'Blog, Produkttexte & Landingpages erstellen' },
+  email: { title: 'Email-Kampagnen', desc: 'Emails, Sequenzen und Betreffzeilen' },
+  social: { title: 'Social Media', desc: 'Posts, Kalender und Hashtags' },
+  seo: { title: 'SEO & Keywords', desc: 'Keyword-Recherche, Meta-Tags, SEO-Texte' },
+  ads: { title: 'Ads-Texte', desc: 'Ad-Varianten für Google, Meta, LinkedIn & Co.' },
+  strategy: { title: 'Strategie-Assistent', desc: '30-Tage-Marketing-Strategie auf Knopfdruck' }
+};
+
+function showSection(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  const m = pageMeta[id] || {};
+  document.getElementById('page-title').textContent = m.title || id;
+  document.getElementById('page-desc').textContent = m.desc || '';
+}
+
+function switchTab(btn, paneId) {
+  const container = btn.closest('.section') || document.body;
+  container.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  container.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId).classList.add('active');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function copyOutput(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('In Zwischenablage kopiert ✓')).catch(() => showToast('Fehler beim Kopieren'));
+}
+
+function downloadOutput(id, filename) {
+  const text = document.getElementById(id).textContent;
+  const a = document.createElement('a');
+  a.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(text);
+  a.download = filename;
+  a.click();
+}
+
+function setBtn(id, loading) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '<div class="spinner"></div> Generiere…';
+  } else {
+    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
+  }
+}
+
+function setOutput(id, text) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.classList.remove('output-placeholder');
+}
+
+// ── Claude API call with streaming ───────────────────────────────────────────
+async function claude(prompt, outputId, btnId) {
+  if (!API_KEY) {
+    document.getElementById('api-overlay').classList.remove('hidden');
+    return;
+  }
+  setBtn(btnId, true);
+  const el = document.getElementById(outputId);
+  el.textContent = '';
+  el.classList.remove('output-placeholder');
+  el.classList.add('streaming-cursor');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1500,
+        stream: true,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      setOutput(outputId, 'Fehler: ' + (err.error?.message || res.statusText));
+      setBtn(btnId, false);
+      el.classList.remove('streaming-cursor');
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') continue;
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+            el.textContent += parsed.delta.text;
+            el.scrollTop = el.scrollHeight;
+          }
+        } catch {}
+      }
+    }
+  } catch (e) {
+    setOutput(outputId, 'Netzwerkfehler: ' + e.message);
+  }
+
+  el.classList.remove('streaming-cursor');
+  setBtn(btnId, false);
+}
+
+// ── Generators ────────────────────────────────────────────────────────────────
+function generateBlog() {
+  const topic = document.getElementById('blog-topic').value.trim() || 'Digitales Marketing';
+  const tone = document.getElementById('blog-tone').value;
+  const len = document.getElementById('blog-len').value;
+  const kw = document.getElementById('blog-kw').value;
+  const aud = document.getElementById('blog-audience').value;
+  claude(
+    `Schreibe einen ${len} Blog-Artikel im Stil "${tone}" über: "${topic}".
+${kw ? 'Ziel-Keywords (natürlich einbauen): ' + kw : ''}
+${aud ? 'Zielgruppe: ' + aud : ''}
+Struktur: SEO-optimierter Titel, Einleitung mit Hook, 3–5 H2-Abschnitte mit Inhalt, Fazit mit CTA.
+Antworte komplett auf Deutsch. Ton: authentisch, nicht werblich.`,
+    'blog-output', 'blog-btn'
+  );
+}
+
+function generateProduct() {
+  const name = document.getElementById('prod-name').value.trim() || 'Produkt';
+  const feat = document.getElementById('prod-features').value;
+  const type = document.getElementById('prod-type').value;
+  const price = document.getElementById('prod-price').value;
+  claude(
+    `Erstelle professionelle Produkttexte für "${name}" (Format: ${type}, Preissegment: ${price}).
+Merkmale/Vorteile: ${feat || 'allgemeine Produktmerkmale'}
+Erstelle:
+1. Optimierter Produkttitel (max. 80 Zeichen)
+2. Kurzbeschreibung (2–3 Sätze, emotional)
+3. Ausführliche Produktbeschreibung (4–5 Absätze)
+4. 5 prägnante Bulletpoints mit Vorteilen (je 1 Satz)
+Antworte auf Deutsch.`,
+    'product-output', 'product-btn'
+  );
+}
+
+function generateLanding() {
+  const offer = document.getElementById('lp-offer').value || 'Produkt';
+  const aud = document.getElementById('lp-audience').value || 'Kunden';
+  const pain = document.getElementById('lp-pain').value || '';
+  const goal = document.getElementById('lp-goal').value;
+  claude(
+    `Erstelle vollständige Landingpage-Texte:
+Angebot: ${offer} | Zielgruppe: ${aud} | Problem: ${pain} | Ziel: ${goal}
+Abschnitte:
+1. HERO: Haupt-Headline (max. 8 Wörter, stark), Sub-Headline (1–2 Sätze), CTA-Button-Text
+2. PROBLEM: Kurze Problembeschreibung (2–3 Sätze)
+3. LÖSUNG: 3 Feature-Blöcke (Titel + 2 Sätze je)
+4. SOCIAL PROOF: Testimonial-Vorlage (Name, Aussage)
+5. FAQ: 3 häufige Fragen mit Antworten
+6. ABSCHLUSS-CTA: Headline + Button-Text
+Antworte auf Deutsch.`,
+    'landing-output', 'landing-btn'
+  );
+}
+
+function generateEmail() {
+  const type = document.getElementById('email-type').value;
+  const product = document.getElementById('email-product').value || 'unser Angebot';
+  const cta = document.getElementById('email-cta').value || 'jetzt kaufen';
+  const info = document.getElementById('email-info').value || '';
+  claude(
+    `Schreibe eine professionelle ${type}-Email für "${product}".
+Gewünschte Aktion: "${cta}"
+${info ? 'Zusatzinfos: ' + info : ''}
+Format:
+BETREFFZEILE: [max. 50 Zeichen]
+PREHEADER: [max. 90 Zeichen]
+---
+[Email-Body mit Anrede, 3–4 Absätzen, klarem CTA und Signatur]
+Tonalität: persönlich, überzeugend, nicht spammy. Antworte auf Deutsch.`,
+    'email-output', 'email-btn'
+  );
+}
+
+function generateSubjects() {
+  const topic = document.getElementById('subject-topic').value || 'Angebot';
+  const aud = document.getElementById('subject-audience').value || '';
+  const count = document.getElementById('subject-count').value;
+  claude(
+    `Erstelle ${count} Betreffzeilen-Varianten für eine Marketing-Email zum Thema "${topic}"${aud ? ' an ' + aud : ''}.
+Für jede Variante: Nummer, Betreffzeile (max. 50 Zeichen), Strategie dahinter (1 Satz).
+Variiere die Stile: Neugier, Dringlichkeit, Nutzen, Frage, Zahl, Personalisierung, Humor, direkt.
+Antworte auf Deutsch.`,
+    'subject-output', 'subject-btn'
+  );
+}
+
+function generateSequence() {
+  const type = document.getElementById('seq-type').value;
+  const product = document.getElementById('seq-product').value || 'Produkt';
+  const aud = document.getElementById('seq-audience').value || 'Abonnenten';
+  claude(
+    `Erstelle eine vollständige ${type} für "${product}" an "${aud}".
+Pro Email:
+EMAIL [Nummer]: Tag X nach Anmeldung
+Betreffzeile: ...
+Preheader: ...
+Ziel dieser Email: ...
+[Vollständiger Email-Body]
+---
+Trenne alle Emails klar. Antworte auf Deutsch.`,
+    'sequence-output', 'sequence-btn'
+  );
+}
+
+function generateSocial() {
+  const platforms = [...document.querySelectorAll('#tab-posts .checkbox-group input:checked')].map(c => c.value);
+  const topic = document.getElementById('social-topic').value || 'Produkt';
+  const goal = document.getElementById('social-goal').value;
+  const hashtags = document.getElementById('social-hashtags').value || '';
+  if (!platforms.length) { showToast('Bitte mindestens eine Plattform wählen'); return; }
+  claude(
+    `Erstelle Social-Media-Posts für: ${platforms.join(', ')}
+Thema: "${topic}" | Ziel: ${goal}${hashtags ? ' | Hashtag-Themen: ' + hashtags : ''}
+Pro Plattform: Plattform als Überschrift, optimierter Post (korrekte Länge & Ton), passende Hashtags.
+Antworte auf Deutsch.`,
+    'social-output', 'social-btn'
+  );
+}
+
+function generateCalendar() {
+  const niche = document.getElementById('cal-niche').value || 'Online-Shop';
+  const period = document.getElementById('cal-period').value;
+  const promo = document.getElementById('cal-promo').value || '';
+  claude(
+    `Erstelle einen ${period} Social-Media-Content-Kalender für "${niche}"${promo ? ', aktuelle Aktion: ' + promo : ''}.
+Format pro Eintrag: Datum | Plattform | Post-Typ | Thema | Uhrzeit | Kurzbeschreibung
+Mische: Produktpost, Behind-the-Scenes, Tipp, Kundenstory, Reels/Video-Idee, Story, UGC.
+Antworte auf Deutsch in strukturierter Tabellenform.`,
+    'calendar-output', 'calendar-btn'
+  );
+}
+
+function generateHashtags() {
+  const topic = document.getElementById('ht-topic').value || 'Online-Shop';
+  const platform = document.getElementById('ht-platform').value;
+  const sets = document.getElementById('ht-sets').value;
+  claude(
+    `Erstelle ${sets} Hashtag-Sets für ${platform} zum Thema "${topic}".
+Pro Set: Name des Sets (z. B. "Reichweite", "Nische", "Community"), alle Hashtags, kurze Erklärung.
+Mische Reichweiten: große (>1M), mittlere (100K–1M), kleine (<100K) Tags.
+Antworte auf Deutsch.`,
+    'hashtag-output', 'hashtag-btn'
+  );
+}
+
+function generateKeywords() {
+  const seed = document.getElementById('seo-seed').value || 'Online-Shop';
+  const niche = document.getElementById('seo-niche').value || '';
+  const intent = document.getElementById('seo-intent').value;
+  const market = document.getElementById('seo-market').value;
+  claude(
+    `Keyword-Recherche für "${seed}"${niche ? ' in der Nische ' + niche : ''}, Markt: ${market}, Intention: ${intent}.
+Erstelle:
+1. 5 Haupt-Keywords (Keyword | Suchvolumen-Schätzung | Schwierigkeit 1–10 | Intention)
+2. 10 Long-Tail-Keywords mit Potenzial
+3. 3 Keyword-Cluster (Cluster-Name + 4 verwandte Keywords)
+4. 5 semantische Begriffe (LSI)
+5. Empfehlung: welche 3 Keywords zuerst angehen?
+Antworte auf Deutsch.`,
+    'seo-output', 'seo-btn'
+  );
+}
+
+function generateMeta() {
+  const kw = document.getElementById('meta-kw').value || 'Produkt kaufen';
+  const brand = document.getElementById('meta-brand').value || 'Shop';
+  const type = document.getElementById('meta-type').value;
+  claude(
+    `Erstelle SEO-optimierte Meta-Tags für eine ${type}: Keyword "${kw}", Shop "${brand}".
+Erstelle je 2 Varianten:
+TITLE-TAG A: [Text] (XX Zeichen)
+TITLE-TAG B: [Text] (XX Zeichen)
+META-DESCRIPTION A: [Text] (XX Zeichen)
+META-DESCRIPTION B: [Text] (XX Zeichen)
+Regeln: Title max. 60 Zeichen, Description max. 155 Zeichen. Keyword früh platzieren, CTA einbauen.
+Antworte auf Deutsch.`,
+    'meta-output', 'meta-btn'
+  );
+}
+
+function generateSeoText() {
+  const name = document.getElementById('cat-name').value || 'Kategorie';
+  const kws = document.getElementById('cat-kws').value || '';
+  const len = document.getElementById('cat-len').value;
+  claude(
+    `Schreibe einen ${len} SEO-Kategorietext für "${name}"${kws ? ', Keywords: ' + kws : ''}.
+Natürliche Keyword-Integration (kein Keyword-Stuffing), Mehrwert für Leser.
+Struktur: Einleitung, 2–3 Absätze mit H2-Vorschlag, Abschluss.
+Antworte auf Deutsch.`,
+    'seotext-output', 'seotext-btn'
+  );
+}
+
+function generateAds() {
+  const platform = document.getElementById('ad-platform').value;
+  const product = document.getElementById('ad-product').value || 'Produkt';
+  const usp = document.getElementById('ad-usp').value || '';
+  const aud = document.getElementById('ad-audience').value || '';
+  const cta = document.getElementById('ad-cta').value || 'Jetzt kaufen';
+  claude(
+    `Erstelle 3 Ad-Textvarianten für ${platform}: Produkt "${product}"${usp ? ', USP: ' + usp : ''}${aud ? ', Zielgruppe: ' + aud : ''}, CTA: "${cta}".
+Pro Variante: VARIANTE [X] — [Ansatz: rational/emotional/dringend]
+Alle nötigen Felder für ${platform} (Headlines, Descriptions, CTA).
+Zeichenlimits einhalten. Antworte auf Deutsch.`,
+    'ads-output', 'ads-btn'
+  );
+}
+
+function generateUSP() {
+  const shop = document.getElementById('usp-shop').value || 'Online-Shop';
+  const strengths = document.getElementById('usp-strengths').value || '';
+  const aud = document.getElementById('usp-audience').value || 'Kunden';
+  claude(
+    `Entwickle USP und Positionierung für: ${shop}, Zielgruppe: ${aud}${strengths ? ', Stärken: ' + strengths : ''}.
+Erstelle:
+1. USP-Statement (1 prägnanter Satz)
+2. Positionierungsaussage (3–4 Sätze)
+3. 5 Kernbotschaften für Marketing-Kommunikation
+4. Differenzierung: Was macht dich konkret besser als typische Mitbewerber?
+Antworte auf Deutsch.`,
+    'usp-output', 'usp-btn'
+  );
+}
+
+function generateStrategy() {
+  const shop = document.getElementById('strat-shop').value || 'Online-Shop';
+  const aud = document.getElementById('strat-audience').value || 'Endkunden';
+  const budget = document.getElementById('strat-budget').value || 'nicht angegeben';
+  const goal = document.getElementById('strat-goal').value;
+  const challenges = document.getElementById('strat-challenges').value || '';
+  const channels = [...document.querySelectorAll('#sec-strategy .checkbox-group input:checked')].map(c => c.parentElement.textContent.trim()).join(', ');
+  claude(
+    `Erstelle eine vollständige 30-Tage-Marketing-Strategie:
+Shop: ${shop} | Zielgruppe: ${aud} | Budget: ${budget}€/Monat | Ziel: ${goal}
+${challenges ? 'Herausforderungen: ' + challenges : ''}
+${channels ? 'Aktive Kanäle: ' + channels : ''}
+
+Struktur:
+## 1. Situationsanalyse
+## 2. Strategische Ausrichtung (3 Sätze)
+## 3. Kanal-Empfehlungen mit Budget-Split (% pro Kanal + Begründung)
+## 4. Content-Plan (Themen, Formate, Frequenz pro Kanal)
+## 5. Email-Strategie (Frequenz, Segmentierung, Sequenzen)
+## 6. Wochenplan Woche 1–4 (konkrete Aufgaben)
+## 7. KPIs & Erfolgsmessung (5 Metriken + Zielwerte)
+## 8. Quick Wins (3 sofort umsetzbare Maßnahmen)
+
+Antworte konkret und auf Deutsch. Keine vagen Empfehlungen.`,
+    'strategy-output', 'strategy-btn'
+  );
+}
+</script>
+</body>
+</html>
